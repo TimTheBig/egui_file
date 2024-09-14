@@ -11,7 +11,7 @@ use std::{
 };
 
 use egui::{
-  Align2, Context, Id, Key, Layout, Pos2, RichText, ScrollArea, TextEdit, Ui, Vec2, Window,
+  Align2, Context, Frame, Id, Key, Layout, Pos2, RichText, ScrollArea, TextEdit, Ui, Vec2, Visuals, Window
 };
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -455,7 +455,7 @@ impl FileDialog {
 
   /// Shows the dialog if it is open. It is also responsible for state management.
   /// Should be called every ui update.
-  pub fn show(&mut self, ctx: &Context) -> &Self {
+  pub fn show(&mut self, ctx: &Context, visuals: &Visuals) -> &Self {
     self.state = match self.state {
       State::Open => {
         if ctx.input(|state| state.key_pressed(Key::Escape)) {
@@ -463,7 +463,7 @@ impl FileDialog {
         }
 
         let mut is_open = true;
-        self.ui(ctx, &mut is_open);
+        self.ui(ctx, &mut is_open, visuals);
         match is_open {
           true => self.state,
           false => State::Cancelled,
@@ -475,8 +475,8 @@ impl FileDialog {
     self
   }
 
-  fn ui(&mut self, ctx: &Context, is_open: &mut bool) {
-    let mut window = Window::new(RichText::new(&self.title).strong())
+  fn ui(&mut self, ctx: &Context, is_open: &mut bool, visuals: &Visuals) {
+    let mut window = Window::new(RichText::new(&self.title).strong()).frame(Frame::default().fill(visuals.panel_fill).inner_margin(egui::Margin::symmetric(12.0, 12.0)))
       .open(is_open)
       .default_size(self.default_size)
       .resizable(self.resizable)
@@ -525,8 +525,11 @@ impl FileDialog {
     }
     let mut command: Option<Command> = None;
 
+    // add spaceing
+    ui.style_mut().spacing.item_spacing = egui::vec2(15.0, 15.0);
+
     // Top directory field with buttons.
-    egui::TopBottomPanel::top("egui_file_top").show_inside(ui, |ui| {
+    egui::TopBottomPanel::top("egui_file_top").frame(Frame::default().fill(ui.visuals().panel_fill).inner_margin(egui::Margin::symmetric(12.0, 12.0))).show_inside(ui, |ui| {
       ui.horizontal(|ui| {
         ui.add_enabled_ui(self.path.parent().is_some(), |ui| {
           let response = ui.button("⬆").on_hover_text("Parent Folder");
@@ -555,7 +558,7 @@ impl FileDialog {
     });
 
     // Bottom file field.
-    egui::TopBottomPanel::bottom("egui_file_bottom").show_inside(ui, |ui| {
+    egui::TopBottomPanel::bottom("egui_file_bottom").frame(Frame::default().fill(ui.visuals().panel_fill).inner_margin(egui::Margin::symmetric(12.0, 12.0))).show_inside(ui, |ui| {
       ui.add_space(ui.spacing().item_spacing.y * 2.0);
       ui.horizontal(|ui| {
         ui.label("File:");
@@ -660,16 +663,19 @@ impl FileDialog {
         }
 
         #[cfg(unix)]
-        ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
-          if ui.checkbox(&mut self.show_hidden, "Show Hidden").changed() {
-            self.refresh();
-          }
+        ui.horizontal(|ui| {
+          ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+            if ui.checkbox(&mut self.show_hidden, "").changed() {
+              self.refresh();
+            }
+            ui.label("Show Hidden")
+          });
         });
       });
     });
 
     // File list.
-    egui::CentralPanel::default().show_inside(ui, |ui| {
+    egui::CentralPanel::default().frame(Frame::default().fill(ui.visuals().panel_fill).inner_margin(egui::Margin::symmetric(12.0, 12.0))).show_inside(ui, |ui| {
       ScrollArea::vertical().show_rows(
         ui,
         ui.text_style_height(&egui::TextStyle::Body),
